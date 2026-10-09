@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <title>Jev Voice architecture</title>
+  <style>
+    .bg { fill: #ffffff; }
+    .box { fill: #f6f7f9; stroke: #d5d9e0; }
+    .zone { fill: none; stroke: #c3c9d3; stroke-dasharray: 5 5; }
+    .accent { fill: #eef2fd; stroke: #2f5bd3; }
+    .t { fill: #1d1d1b; font-size: 15px; font-weight: 600; }
+    .s { fill: #5d6066; font-size: 12.5px; }
+    .z { fill: #7a7e86; font-size: 12px; font-weight: 600; letter-spacing: .06em; }
+    .arrow { stroke: #2f5bd3; stroke-width: 2; fill: none; marker-end: url(#a); }
+    .back { stroke: #8a8f99; stroke-width: 2; fill: none; marker-end: url(#b); stroke-dasharray: 4 4; }
+    .lbl { fill: #2f5bd3; font-size: 12px; }
+    .lblg { fill: #6b7079; font-size: 12px; }
+    #a path { fill: #2f5bd3; } #b path { fill: #8a8f99; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .box { fill: #161b22; stroke: #30363d; }
+      .zone { stroke: #3d444d; }
+      .accent { fill: #16213d; stroke: #6d8ef0; }
+      .t { fill: #e6edf3; } .s { fill: #9198a1; } .z { fill: #7d8590; }
+      .arrow { stroke: #6d8ef0; } .lbl { fill: #6d8ef0; } #a path { fill: #6d8ef0; }
+      .back { stroke: #7d8590; } .lblg { fill: #9198a1; } #b path { fill: #7d8590; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z"/></marker>
+  </defs>
+  <rect class="bg" width="960" height="400" rx="14"/>
+
+  <!-- local host -->
+  <rect class="zone" x="20" y="20" width="430" height="360" rx="12"/>
+  <text class="z" x="40" y="46">LOCAL HOST (PYTHON, NATIVE MESSAGING)</text>
+
+  <rect class="box" x="40" y="64" width="180" height="84" rx="10"/>
+  <text class="t" x="58" y="94">🎙 Microphone</text>
+  <text class="s" x="58" y="116">pw-record, parecord</text>
+  <text class="s" x="58" y="134">or arecord</text>
+
+  <rect class="box" x="250" y="64" width="180" height="84" rx="10"/>
+  <text class="t" x="268" y="94">Live transcript</text>
+  <text class="s" x="268" y="116">Deepgram nova-3 on</text>
+  <text class="s" x="268" y="134">Cloudflare Workers AI</text>
+
+  <rect class="accent" x="40" y="176" width="390" height="76" rx="10"/>
+  <text class="t" x="58" y="206">Plan: claude -p</text>
+  <text class="s" x="58" y="228">your Claude Code login, low effort, no tools: 1 or 2 narrow goals,</text>
+  <text class="s" x="58" y="244">which tab, and the question to answer at the end</text>
+
+  <rect class="accent" x="40" y="280" width="390" height="80" rx="10"/>
+  <text class="t" x="58" y="310">Jev loop (jev-ultrafast)</text>
+  <text class="s" x="58" y="332">one decision at a time from the page's element list,</text>
+  <text class="s" x="58" y="348">approval before send / buy / delete, stop on login or captcha</text>
+
+  <path class="arrow" d="M220 106H246"/>
+  <path class="arrow" d="M340 148V172"/>
+  <path class="arrow" d="M235 252V276"/>
+
+  <!-- browser -->
+  <rect class="zone" x="510" y="20" width="430" height="360" rx="12"/>
+  <text class="z" x="530" y="46">YOUR BROWSER (YOUR PROFILE, YOUR SESSIONS)</text>
+
+  <rect class="box" x="530" y="64" width="390" height="120" rx="10"/>
+  <text class="t" x="548" y="94">Extension side panel</text>
+  <text class="s" x="548" y="118">snapshot.js reads the page: elements, text, iframes, shadow DOM</text>
+  <text class="s" x="548" y="138">acts with chrome.scripting: element still there, visible,</text>
+  <text class="s" x="548" y="156">enabled and not covered, or the action is refused as stale</text>
+  <text class="s" x="548" y="174">no chrome.debugger, no remote debugging port</text>
+
+  <rect class="box" x="530" y="240" width="390" height="96" rx="10"/>
+  <text class="t" x="548" y="270">The tab</text>
+  <text class="s" x="548" y="294">the one you spoke from, or a new background tab</text>
+  <text class="s" x="548" y="314">focus never moves unless you click "Show the tab"</text>
+
+  <path class="back" d="M526 96C478 96 478 214 434 214"/>
+  <text class="lblg" x="438" y="196">command</text>
+  <path class="arrow" d="M430 320C482 320 482 160 526 160"/>
+  <text class="lbl" x="438" y="342">observe / act</text>
+  <path class="arrow" d="M725 184V236"/>
+  <text class="lbl" x="735" y="214">clicks, typing, scroll</text>
+</svg>

@@ -1,0 +1,21 @@
+[project]
+name = "jev-voice-host"
+version = "0.1.0"
+description = "Native Messaging host of the Jev Voice browser extension."
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = [
+    "httpx[http2]>=0.28,<1",
+    "websockets>=15",
+    # Jev's decision loop (choose, field_text). Pinned: the extension's snapshot follows this version's format.
+    "jev-ultrafast @ git+https://github.com/browser-use/jev-ultrafast@1231850a0bf1a0c0341fe408ef1668dbbfdfac46",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.4,<9"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["../tests"]

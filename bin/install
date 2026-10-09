@@ -1,0 +1,110 @@
+#!/bin/sh
+# Install the Jev Voice native host: Python environment, browser registration, config file.
+#
+#   bin/install                      register with every Chromium-family browser found for this user
+#   bin/install --browser brave      only this one (chrome, chromium, brave, edge, vivaldi); repeatable
+#   bin/install --profile DIR        register with a browser started with --user-data-dir=DIR (instead of the
+#                                    detected browsers; add --browser to register with both)
+#   bin/install --extension-id ID    allow another extension id (if you removed "key" from the manifest)
+#   bin/install --uninstall          remove the registrations written by this script (keeps your keys)
+#   bin/install --uninstall --purge  also delete the keys file and the logs
+set -e
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+NAME=jev_voice.host
+BROWSERS="" PROFILES="" ID="" UNINSTALL="" PURGE=""
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}/jev-voice/env"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/jev-voice"
+
+need() { [ -n "$2" ] || { echo "$1 needs a value (see --help)" >&2; exit 2; }; }
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --browser) need "$1" "$2"; BROWSERS="$BROWSERS $2"; shift 2 ;;
+    --profile) need "$1" "$2"; case "$2" in /*) p="$2" ;; *) p="$PWD/$2" ;; esac; PROFILES="$PROFILES|$p"; shift 2 ;;
+    --extension-id) need "$1" "$2"; ID="$2"; shift 2 ;;
+    --uninstall) UNINSTALL=1; shift ;;
+    --purge) PURGE=1; shift ;;
+    -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "unknown option: $1 (see --help)" >&2; exit 2 ;;
+  esac
+done
+[ -n "$PURGE" ] && [ -z "$UNINSTALL" ] && { echo "--purge goes with --uninstall" >&2; exit 2; }
+
+# Per-user config folder of each browser.
+if [ "$(uname)" = Darwin ]; then
+  base="$HOME/Library/Application Support"
+  dir_of() { case "$1" in
+    chrome) echo "$base/Google/Chrome" ;; chromium) echo "$base/Chromium" ;;
+    brave) echo "$base/BraveSoftware/Brave-Browser" ;; edge) echo "$base/Microsoft Edge" ;;
+    vivaldi) echo "$base/Vivaldi" ;; *) return 1 ;; esac; }
+else
+  base="${XDG_CONFIG_HOME:-$HOME/.config}"
+  dir_of() { case "$1" in
+    chrome) echo "$base/google-chrome" ;; chromium) echo "$base/chromium" ;;
+    brave) echo "$base/BraveSoftware/Brave-Browser" ;; edge) echo "$base/microsoft-edge" ;;
+    vivaldi) echo "$base/vivaldi" ;; *) return 1 ;; esac; }
+fi
+
+TARGETS=""
+if [ -z "$BROWSERS" ] && [ -z "$PROFILES" ]; then
+  for b in chrome chromium brave edge vivaldi; do
+    d=$(dir_of $b); [ -d "$d" ] && TARGETS="$TARGETS|$d"
+  done
+  [ -z "$TARGETS" ] && [ -z "$UNINSTALL" ] && { echo "No Chromium-family browser profile found: use --browser or --profile." >&2; exit 1; }
+else
+  for b in $BROWSERS; do d=$(dir_of "$b") || { echo "unknown browser: $b" >&2; exit 2; }; TARGETS="$TARGETS|$d"; done
+fi
+IFS='|'
+for p in $PROFILES; do
+  [ -z "$p" ] && continue
+  if [ -n "$UNINSTALL" ]; then [ -d "$p" ] && TARGETS="$TARGETS|$p"  # never create a folder to uninstall
+  else mkdir -p "$p" && TARGETS="$TARGETS|$p"; fi
+done
+unset IFS
+
+if [ -n "$UNINSTALL" ]; then
+  IFS='|'; for d in $TARGETS; do [ -n "$d" ] && rm -f "$d/NativeMessagingHosts/$NAME.json" && echo "removed: $d/NativeMessagingHosts/$NAME.json"; done
+  if [ -n "$PURGE" ]; then
+    rm -f "$CONF" && rmdir "$(dirname "$CONF")" 2>/dev/null; rm -rf "$STATE"
+    echo "removed: $CONF and $STATE"
+  elif [ -f "$CONF" ]; then
+    echo "kept: $CONF (your API keys; delete it, or run again with --purge)"
+  fi
+  exit 0
+fi
+
+# Python environment of the host.
+UV=$(command -v uv || true); [ -z "$UV" ] && [ -x "$HOME/.local/bin/uv" ] && UV="$HOME/.local/bin/uv"
+if [ -z "$UV" ]; then
+  echo "uv is required: https://docs.astral.sh/uv/getting-started/installation/" >&2; exit 1
+fi
+(cd "$ROOT/host" && "$UV" sync --quiet --frozen)
+
+# Extension id: derived from the public key pinned in the manifest, so it is the same on every machine.
+[ -z "$ID" ] && ID=$(python3 -c "
+import base64, hashlib, json, sys
+key = json.load(open(sys.argv[1])).get('key')
+print(''.join(chr(97 + int(c, 16)) for c in hashlib.sha256(base64.b64decode(key)).hexdigest()[:32]) if key else '')
+" "$ROOT/extension/manifest.json")
+[ -z "$ID" ] && { echo "The manifest has no key: pass --extension-id (shown on the extensions page)." >&2; exit 1; }
+
+IFS='|'
+for d in $TARGETS; do
+  [ -z "$d" ] && continue
+  mkdir -p "$d/NativeMessagingHosts"
+  python3 -c "
+import json, sys
+json.dump({'name': sys.argv[1], 'description': 'Jev Voice local host', 'path': sys.argv[2], 'type': 'stdio',
+           'allowed_origins': ['chrome-extension://%s/' % sys.argv[3]]}, open(sys.argv[4], 'w'), indent=2)
+" "$NAME" "$ROOT/host/run.sh" "$ID" "$d/NativeMessagingHosts/$NAME.json"
+  echo "registered: $d/NativeMessagingHosts/$NAME.json"
+done
+unset IFS
+
+if [ ! -f "$CONF" ]; then
+  mkdir -p "$(dirname "$CONF")"
+  (umask 077 && cp "$ROOT/config.example.env" "$CONF")
+  echo "config: $CONF (created, fill in your keys)"
+else
+  echo "config: $CONF"
+fi
+echo "extension: load $ROOT/extension as an unpacked extension (id $ID)"
